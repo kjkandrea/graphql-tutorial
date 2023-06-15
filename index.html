@@ -1,0 +1,90 @@
+<html>
+    <body>
+        <h1>Graphql!</h1>
+        <h2 id="title"></h2>
+        <ul id="topics"></ul> 
+        <article></article> 
+        <script>
+            function setTopic(id){
+                fetch('/graphql', {
+                method:'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                        query: `
+                            query getTopicSyntax($topicId:Int!){
+                                getTopic(id: $topicId){id title body}
+                            }
+                        `,
+                        variables: {topicId:id}
+                    })
+                })
+                    .then(type=>type.json())
+                    .then(result=>{
+                        const topic = result.data.getTopic;
+                        const tag = `<h2>${topic.title}</h2>${topic.body}`;
+                        document.querySelector('article').innerHTML = tag;
+                    })
+            }
+            function init(){
+                fetch('/graphql', {
+                    method:'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: `
+                        {
+                            title
+                            topics{id title}
+                        }`
+                    })
+                })
+                .then(type=>type.json())
+                .then(result=>{
+                    document.querySelector('#title').innerHTML = result.data.title;
+                    let listTag = '';
+                    const topics = result.data.topics;
+                    for(let i=0; i<topics.length; i++){
+                        listTag += `
+                            <li>
+                                <a 
+                                    href="topics/${topics[i].id}" 
+                                    onClick="
+                                        event.preventDefault();
+                                        setTopic(${topics[i].id})
+                                    "
+                                >
+                                    ${topics[i].title}
+                                </a>
+                            </li>`
+                    }
+                    document.querySelector('#topics').innerHTML = listTag;
+                })
+            }
+            function createHandle(){
+                const title = prompt('title?');
+                const body = prompt('body?');
+                fetch('/graphql', {
+                method:'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: `
+                    mutation createTopic($title: String!, $body: String){
+                        createTopic(title: $title, body: $body) {id}
+                    }
+                    `,
+                    variables:{
+                    title:title,
+                    body:body
+                    }
+                })
+                })
+                .then(type=>type.json())
+                .then(result=>{
+                    init();
+                    setTopic(result.data.createTopic.id);
+                })
+            }
+            init();
+        </script>
+        <input type="Button" value="create" onClick="createHandle();">
+    </body>
+</html>
